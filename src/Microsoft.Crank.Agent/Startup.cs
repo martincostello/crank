@@ -2663,11 +2663,11 @@ namespace Microsoft.Crank.Agent
             // Retrieve current versions
             var (currentRuntimeVersion, currentDesktopVersion, currentAspNetCoreVersion, currentSdkVersion) = await GetCurrentVersions(targetFramework);
 
-            runtimeVersion = await ResolveRuntimeVersion(buildToolsPath, targetFramework, runtimeVersion, currentRuntimeVersion);
+            runtimeVersion = await ResolveRuntimeVersion(channel, buildToolsPath, targetFramework, runtimeVersion, currentRuntimeVersion);
 
             sdkVersion = await ResolveSdkVersion(sdkVersion, currentSdkVersion);
 
-            aspNetCoreVersion = await ResolveAspNetCoreVersion(aspNetCoreVersion, currentAspNetCoreVersion, targetFramework);
+            aspNetCoreVersion = await ResolveAspNetCoreVersion(channel, aspNetCoreVersion, currentAspNetCoreVersion, targetFramework);
 
             sdkVersion = PatchOrCreateGlobalJson(job, benchmarkedApp, sdkVersion);
 
@@ -2696,9 +2696,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install latest SDK version (and associated runtime)
 
-                        dotnetFeed = GetAzureFeedForVersion(sdkVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.Sdk, sdkVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.Sdk, sdkVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -2725,9 +2725,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install runtimes required for this scenario
 
-                        dotnetFeed = GetAzureFeedForVersion(runtimeVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.NetCoreApp, runtimeVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.NetCoreApp, runtimeVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -2761,9 +2761,9 @@ namespace Microsoft.Crank.Agent
                                 dotnetInstallStep = $"Desktop runtime '{desktopVersion}'";
                                 Log.Info($"Installing {dotnetInstallStep} ...");
 
-                                dotnetFeed = GetAzureFeedForVersion(desktopVersion);
+                                dotnetFeed = GetAzureFeedForVersion(channel);
 
-                                if (!await CheckPackageExistsAsync(PackageTypes.WindowsDesktop, desktopVersion))
+                                if (!await CheckPackageExistsAsync(channel, PackageTypes.WindowsDesktop, desktopVersion))
                                 {
                                     throw new InvalidOperationException();
                                 }
@@ -2809,9 +2809,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install aspnet runtime required for this scenario
 
-                        dotnetFeed = GetAzureFeedForVersion(aspNetCoreVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.AspNetCore, aspNetCoreVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.AspNetCore, aspNetCoreVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -2840,9 +2840,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install latest SDK version (and associated runtime)
 
-                        dotnetFeed = GetAzureFeedForVersion(sdkVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.Sdk, sdkVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.Sdk, sdkVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -2869,9 +2869,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install required runtime
 
-                        dotnetFeed = GetAzureFeedForVersion(runtimeVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.NetCoreApp, runtimeVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.NetCoreApp, runtimeVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -2899,9 +2899,9 @@ namespace Microsoft.Crank.Agent
 
                         // Install required runtime
 
-                        dotnetFeed = GetAzureFeedForVersion(aspNetCoreVersion);
+                        dotnetFeed = GetAzureFeedForVersion(channel);
 
-                        if (!await CheckPackageExistsAsync(PackageTypes.AspNetCore, aspNetCoreVersion))
+                        if (!await CheckPackageExistsAsync(channel, PackageTypes.AspNetCore, aspNetCoreVersion))
                         {
                             throw new InvalidOperationException();
                         }
@@ -3340,7 +3340,7 @@ namespace Microsoft.Crank.Agent
             {
                 if (job.UseMonoRuntime.Equals("llvm-aot"))
                 {
-                    await AOT4Mono(sdkVersion, runtimeVersion, outputFolder);
+                    await AOT4Mono(channel, sdkVersion, runtimeVersion, outputFolder);
                 }
             }
 
@@ -3651,7 +3651,7 @@ namespace Microsoft.Crank.Agent
             return desktopVersion;
         }
 
-        private static async Task<string> ResolveAspNetCoreVersion(string aspNetCoreVersion, string currentAspNetCoreVersion, string targetFramework)
+        private static async Task<string> ResolveAspNetCoreVersion(string channel, string aspNetCoreVersion, string currentAspNetCoreVersion, string targetFramework)
         {
             var versionPrefix = targetFramework.Substring(targetFramework.Length - 3);
 
@@ -3668,22 +3668,22 @@ namespace Microsoft.Crank.Agent
                 // aspnet runtime service releases are not published on feeds
                 if (versionPrefix == "8.0")
                 {
-                    aspNetCoreVersion = await GetFlatContainerVersion(_aspnet8FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    aspNetCoreVersion = await GetFlatContainerVersion(channel, _aspnet8FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"ASP.NET: {aspNetCoreVersion} (Latest - From 8.0 feed)");
                 }
                 if (versionPrefix == "7.0")
                 {
-                    aspNetCoreVersion = await GetFlatContainerVersion(_aspnet7FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    aspNetCoreVersion = await GetFlatContainerVersion(channel, _aspnet7FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"ASP.NET: {aspNetCoreVersion} (Latest - From 7.0 feed)");
                 }
                 else if (versionPrefix == "6.0")
                 {
-                    aspNetCoreVersion = await GetFlatContainerVersion(_aspnet6FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    aspNetCoreVersion = await GetFlatContainerVersion(channel, _aspnet6FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"ASP.NET: {aspNetCoreVersion} (Latest - From 6.0 feed)");
                 }
                 else if (versionPrefix == "5.0")
                 {
-                    aspNetCoreVersion = await GetFlatContainerVersion(_aspnet5FlatContainerUrl, versionPrefix);
+                    aspNetCoreVersion = await GetFlatContainerVersion(channel, _aspnet5FlatContainerUrl, versionPrefix);
                     Log.Info($"ASP.NET: {aspNetCoreVersion} (Latest - From 5.0 feed)");
                 }
                 else
@@ -3996,7 +3996,7 @@ namespace Microsoft.Crank.Agent
             return sdkVersion;
         }
 
-        private static async Task<string> ResolveRuntimeVersion(string buildToolsPath, string targetFramework, string runtimeVersion, string currentRuntimeVersion)
+        private static async Task<string> ResolveRuntimeVersion(string channel, string buildToolsPath, string targetFramework, string runtimeVersion, string currentRuntimeVersion)
         {
             if (String.Equals(runtimeVersion, "Current", StringComparison.OrdinalIgnoreCase))
             {
@@ -4018,22 +4018,22 @@ namespace Microsoft.Crank.Agent
 
                 if (versionPrefix == "8.0")
                 {
-                    runtimeVersion = await GetFlatContainerVersion(_netcore8FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    runtimeVersion = await GetFlatContainerVersion(channel, _netcore8FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"Runtime: {runtimeVersion} (Latest - From 8.0 feed)");
                 }
                 else if (versionPrefix == "7.0")
                 {
-                    runtimeVersion = await GetFlatContainerVersion(_netcore7FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    runtimeVersion = await GetFlatContainerVersion(channel, _netcore7FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"Runtime: {runtimeVersion} (Latest - From 7.0 feed)");
                 }
                 else if (versionPrefix == "6.0")
                 {
-                    runtimeVersion = await GetFlatContainerVersion(_netcore6FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
+                    runtimeVersion = await GetFlatContainerVersion(channel, _netcore6FlatContainerUrl, versionPrefix, checkDotnetInstallUrl: true);
                     Log.Info($"Runtime: {runtimeVersion} (Latest - From 6.0 feed)");
                 }
                 else if (versionPrefix == "5.0")
                 {
-                    runtimeVersion = await GetFlatContainerVersion(_netcore5FlatContainerUrl, versionPrefix);
+                    runtimeVersion = await GetFlatContainerVersion(channel, _netcore5FlatContainerUrl, versionPrefix);
                     Log.Info($"Runtime: {runtimeVersion} (Latest - From 5.0 feed)");
                 }
                 else
@@ -5167,7 +5167,7 @@ namespace Microsoft.Crank.Agent
             }
         }
 
-        private static async Task AOT4Mono(string dotnetSdkVersion, string runtimeVersion, string outputFolder)
+        private static async Task AOT4Mono(string channel, string dotnetSdkVersion, string runtimeVersion, string outputFolder)
         {
             var pkgNameSuffix = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
                 ? "arm64"
@@ -5199,7 +5199,7 @@ namespace Microsoft.Crank.Agent
 
                 var found = false;
                 
-                var url = $"{GetAzureFeedForVersion(dotnetSdkVersion)}/Sdk/{dotnetSdkVersion}/dotnet-sdk-{dotnetSdkVersion}-linux-{pkgNameSuffix}.tar.gz";
+                var url = $"{GetAzureFeedForVersion(channel)}/Sdk/{dotnetSdkVersion}/dotnet-sdk-{dotnetSdkVersion}-linux-{pkgNameSuffix}.tar.gz";
 
                 if (await DownloadFileAsync(url, dotnetMonoPath, maxRetries: 3, timeout: 60, throwOnError: false))
                 {
@@ -5562,15 +5562,15 @@ namespace Microsoft.Crank.Agent
             return null;
         }
 
-        public static string GetAzureFeedForVersion(string version)
+        public static string GetAzureFeedForVersion(string channel)
         {
-            return version.StartsWith("8.0")
+            return string.Equals(channel, "edge", StringComparison.OrdinalIgnoreCase)
                 ? "https://dotnetbuilds.azureedge.net/public" // since 7.0, nightly builds are on this feed
                 : "https://dotnetcli.azureedge.net/dotnet" // this is the default dotnet-install feed
                 ;
         }
 
-        private static async Task<bool> CheckPackageExistsAsync(PackageTypes runtime, string version)
+        private static async Task<bool> CheckPackageExistsAsync(string channel, PackageTypes runtime, string version)
         {
             // packageIndexUrl -> https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/flat2/[packageName]/index.json
             // e.g., https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/flat2/Microsoft.AspNetCore.App.Runtime.linux-x64/index.json
@@ -5595,7 +5595,7 @@ namespace Microsoft.Crank.Agent
                 : "tar.gz"
                 ;
 
-            var dotnetFeed = GetAzureFeedForVersion(version);
+            var dotnetFeed = GetAzureFeedForVersion(channel);
 
             var download_link = String.Format(urlPattern, version, GetPlatformMoniker(), extension, dotnetFeed);
 
@@ -5610,7 +5610,7 @@ namespace Microsoft.Crank.Agent
             return response.StatusCode == HttpStatusCode.NotModified;
         }
 
-        private static async Task<string> GetFlatContainerVersion(string packageIndexUrl, string versionPrefix, bool checkDotnetInstallUrl = false)
+        private static async Task<string> GetFlatContainerVersion(string channel, string packageIndexUrl, string versionPrefix, bool checkDotnetInstallUrl = false)
         {
             var root = JObject.Parse(await DownloadContentAsync(packageIndexUrl));
 
@@ -5640,7 +5640,7 @@ namespace Microsoft.Crank.Agent
             {
                 var version = nugetVersion.OriginalVersion;
 
-                if (await CheckPackageExistsAsync(runtimeType, version))
+                if (await CheckPackageExistsAsync(channel, runtimeType, version))
                 { 
                     return version;
                 }
